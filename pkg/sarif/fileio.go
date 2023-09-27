@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"reflect"
 )
 
 func ReadSarifFile(file string) (Sarif, error) {
@@ -36,4 +37,40 @@ func WriteSarifFile(file string, sarifData Sarif) error {
 	}
 
 	return nil
+}
+
+func RemoveNullFields(v reflect.Value) {
+	switch v.Kind() {
+	case reflect.Ptr:
+		if v.IsNil() {
+			return
+		}
+		RemoveNullFields(v.Elem())
+	case reflect.Interface:
+		if v.IsNil() {
+			return
+		}
+		RemoveNullFields(v.Elem())
+	case reflect.Struct:
+		for i := 0; i < v.NumField(); i++ {
+			field := v.Field(i)
+			if field.Kind() == reflect.Ptr && field.IsNil() {
+				// Replace nil pointer with zero value of its type
+				field.Set(reflect.New(field.Type().Elem()))
+			} else if field.Kind() == reflect.Slice && field.IsNil() {
+				// Replace nil slice with empty slice of its type
+				field.Set(reflect.MakeSlice(field.Type(), 0, 0))
+			} else {
+				RemoveNullFields(field)
+			}
+		}
+	case reflect.Slice:
+		for i := 0; i < v.Len(); i++ {
+			RemoveNullFields(v.Index(i))
+		}
+	case reflect.Map:
+		for _, key := range v.MapKeys() {
+			RemoveNullFields(v.MapIndex(key))
+		}
+	}
 }

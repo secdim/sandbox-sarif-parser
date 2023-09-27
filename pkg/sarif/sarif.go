@@ -10,7 +10,6 @@ type Runs struct {
 	Tool           Tool           `json:"tool"`
 	Artifacts      []Artifact     `json:"artifacts"`
 	Results        []Result       `json:"results"`
-	ColumnKind     string         `json:"columnKind"`
 	RunsProperties RunsProperties `json:"properties"`
 }
 

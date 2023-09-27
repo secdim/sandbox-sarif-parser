@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"reflect"
 	"sandbox/pkg/message"
 	"sandbox/pkg/sarif"
 	"sandbox/pkg/search"
@@ -23,6 +24,8 @@ Usage:
 	if err != nil {
 		return
 	}
+	v := reflect.ValueOf(&inSarifFile).Elem()
+	sarif.RemoveNullFields(v)
 
 	var searchTerms = search.ParseSarifStruct(inSarifFile)
 	var searchResults []search.SearchResult
