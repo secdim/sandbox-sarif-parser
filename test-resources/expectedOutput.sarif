@@ -1,0 +1,102 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "semgrep",
+          "rules": [
+            {
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "fullDescription": {
+                "text": "Found user-controlled request data passed into a HttpResponseBadRequest. This could be vulnerable to XSS, leading to attackers gaining access to user cookies and protected information. Ensure that the request data is properly escaped or sanitzed."
+              },
+              "help": {
+                "markdown": "Cross Site Scriping\n- [Explore this vulnerability in SecDim Sandbox](https://play.secdim.com/sandbox/cross-site-scriping/id/107/).\n\n",
+                "text": "Cross Site Scriping\n- [Explore this vulnerability in SecDim Sandbox](https://play.secdim.com/sandbox/cross-site-scriping/id/107/).\n\n"
+              },
+              "helpUri": "https://play.secdim.com/sandbox/",
+              "id": "python.django.security.injection.reflected-data-httpresponsebadrequest.reflected-data-httpresponsebadrequest",
+              "name": "python.django.security.injection.reflected-data-httpresponsebadrequest.reflected-data-httpresponsebadrequest",
+              "properties": {
+                "precision": "very-high",
+                "tags": [
+                  "CWE-79: Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')",
+                  "MEDIUM CONFIDENCE",
+                  "OWASP-A03:2021 - Injection",
+                  "OWASP-A07:2017 - Cross-Site Scripting (XSS)",
+                  "security"
+                ]
+              },
+              "shortDescription": {
+                "text": "Semgrep Finding: go.lang.security.audit.xss.template-html-does-not-escape.unsafe-template-type"
+              }
+            },
+            {
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "fullDescription": {
+                "text": "If unverified user data can reach the `run` or `create` method it can result in running arbitrary container."
+              },
+              "help": {
+                "markdown": "There is currently no SecDim Sandbox for this security vulnerability. Visit [SecDim Sandbox](https://play.secdim.com/sandbox/) to explore other security vulnerabilities.",
+                "text": "There is currently no SecDim Sandbox for this security vulnerability. Visit [SecDim Sandbox](https://play.secdim.com/sandbox/) to explore other security vulnerabilities."
+              },
+              "helpUri": "https://play.secdim.com/sandbox/",
+              "id": "python.docker.security.audit.docker-arbitrary-container-run.docker-arbitrary-container-run",
+              "name": "python.docker.security.audit.docker-arbitrary-container-run.docker-arbitrary-container-run",
+              "properties": {
+                "precision": "very-high",
+                "tags": [
+                  "CWE-250: Execution with Unnecessary Privileges",
+                  "LOW CONFIDENCE",
+                  "security"
+                ]
+              },
+              "shortDescription": {
+                "text": "Semgrep Finding: python.docker.security.audit.docker-arbitrary-container-run.docker-arbitrary-container-run"
+              }
+            }
+          ]
+        }
+      },
+      "artifacts": [
+        {
+          "location": {
+            "uri": "test",
+            "uriBaseId": "%SRCROOT%",
+            "index": 0
+          }
+        }
+      ],
+      "results": [
+        {
+          "ruleId": "python.django.security.injection.reflected-data-httpresponsebadrequest.reflected-data-httpresponsebadrequest",
+          "ruleIndex": 9,
+          "message": {
+            "text": ""
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "test/test",
+                  "uriBaseId": "%SRCROOT%",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "columnKind": "utf16CodeUnits",
+      "properties": {
+        "semmle.formatSpecifier": "sarif-latest"
+      }
+    }
+  ]
+}
