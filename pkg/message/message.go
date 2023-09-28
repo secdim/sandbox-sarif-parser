@@ -2,26 +2,29 @@ package message
 
 import (
 	"fmt"
-	"sandbox/pkg/apiresponse"
 	"sandbox/pkg/sarif"
 	"sandbox/pkg/search"
 	"strings"
 )
 
-func generateHelpTextMessage(vulnerability []apiresponse.Vulnerability, ruleId string) string {
+// func generateHelpTextMessage(vulnerability []apiresponse.Vulnerability, ruleId string) string {
+func generateHelpTextMessage(result search.SearchResult) string {
 	var builder strings.Builder
-	for _, vuln := range vulnerability {
-		builder.WriteString("Explore and debug this vulnerability in [SecDim Sandbox](https://play.secdim.com/sandbox/")
+	builder.WriteString("Explore and debug this vulnerability in [SecDim Sandbox](https://play.secdim.com/sandbox/")
+	urlSlug := ""
 
-		urlSlug := ""
-		for i := 0; i < len(vuln.Sandboxes); i++ {
-			if strings.Contains(strings.ToLower(ruleId), strings.ToLower(vuln.Sandboxes[i].Language)) {
-				urlSlug = vuln.Slug + "/id/" + fmt.Sprintf("%d", vuln.Sandboxes[i].ID)
+	if len(result.ResultJson) == 1 {
+		for i := 0; i < len(result.ResultJson[0].Sandboxes); i++ {
+			if strings.Contains(strings.ToLower(result.RuleID), strings.ToLower(result.ResultJson[0].Sandboxes[i].Language)) {
+				urlSlug = result.ResultJson[0].Slug + "/id/" + fmt.Sprintf("%d", result.ResultJson[0].Sandboxes[i].ID)
 				break
 			}
 		}
-		builder.WriteString(urlSlug + "/)\n\n")
+	} else if len(result.ResultJson) > 1 {
+		urlSlug = "?search=" + strings.ReplaceAll(result.Title, " ", "%20")
 	}
+
+	builder.WriteString(urlSlug + "/)\n\n")
 	return builder.String()
 }
 
@@ -31,10 +34,14 @@ func UpdateOutputSarifHelpMessage(outSarif sarif.Sarif, results []search.SearchR
 		for _, run := range outSarif.Runs {
 			for i := 0; i < len(run.Tool.Driver.Rules); i++ {
 				if run.Tool.Driver.Rules[i].ID == result.RuleID {
-					run.Tool.Driver.Rules[i].ShortDescription.Text = "SecDim: " + result.ResultJson[0].Title
+					if len(result.ResultJson) == 1 {
+						run.Tool.Driver.Rules[i].ShortDescription.Text = "SecDim: " + result.ResultJson[0].Title
+					} else if len(result.ResultJson) > 1 {
+						run.Tool.Driver.Rules[i].ShortDescription.Text = "SecDim: " + result.Title
+					}
 					run.Tool.Driver.Rules[i].HelpUri = HelpUri
-					run.Tool.Driver.Rules[i].Help.Text = generateHelpTextMessage(result.ResultJson, result.RuleID) + run.Tool.Driver.Rules[i].Help.Text
-					run.Tool.Driver.Rules[i].Help.Markdown = generateHelpTextMessage(result.ResultJson, result.RuleID) + run.Tool.Driver.Rules[i].Help.Markdown
+					run.Tool.Driver.Rules[i].Help.Text = generateHelpTextMessage(result) + run.Tool.Driver.Rules[i].Help.Text
+					run.Tool.Driver.Rules[i].Help.Markdown = generateHelpTextMessage(result) + run.Tool.Driver.Rules[i].Help.Markdown
 				}
 			}
 		}

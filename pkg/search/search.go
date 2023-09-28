@@ -21,6 +21,7 @@ type SearchTerm struct {
 
 type SearchResult struct {
 	RuleID     string
+	Title      string
 	ResultJson []apiresponse.Vulnerability
 }
 
@@ -83,6 +84,7 @@ func SearchAPI(searchTerm string) ([]byte, error) {
 func GetSearchResults(searchTerm SearchTerm) (SearchResult, error) {
 	var searchResult = SearchResult{
 		RuleID: searchTerm.ID,
+		Title:  searchTerm.OWASPDescription[0],
 	}
 
 	// Initial API search, search CWE Description
