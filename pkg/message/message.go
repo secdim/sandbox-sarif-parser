@@ -7,7 +7,6 @@ import (
 	"strings"
 )
 
-// func generateHelpTextMessage(vulnerability []apiresponse.Vulnerability, ruleId string) string {
 func generateHelpTextMessage(result search.SearchResult) string {
 	var builder strings.Builder
 	builder.WriteString("Explore and debug this vulnerability in [SecDim Sandbox](https://play.secdim.com/sandbox/")
