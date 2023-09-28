@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	apiresponse "sandbox/pkg/apireponse"
+	"sandbox/pkg/apiresponse"
 	"sandbox/pkg/sarif"
 	"strings"
 )
@@ -73,7 +73,7 @@ func SearchAPI(searchTerm string) ([]byte, error) {
 
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
-		fmt.Printf("Error reading reponse body: %v\n", err)
+		fmt.Printf("Error reading response body: %v\n", err)
 		return nil, err
 	}
 
@@ -84,9 +84,11 @@ func GetSearchResults(searchTerm SearchTerm) (SearchResult, error) {
 	var searchResult = SearchResult{
 		RuleID: searchTerm.ID,
 	}
+
+	// Initial API search, search CWE Description
 	response, err := SearchAPI(searchTerm.CWEDescription)
 	if err != nil {
-		fmt.Printf("Error reading reponse body: %v\n", err)
+		fmt.Printf("Error reading response body: %v\n", err)
 		return searchResult, err
 	}
 
@@ -95,7 +97,28 @@ func GetSearchResults(searchTerm SearchTerm) (SearchResult, error) {
 		fmt.Printf("Error unmarshaling JSON: %v\n", err)
 		return searchResult, err
 	}
-	searchResult.ResultJson = jsonResponse
 
+	// If initial API search is empty, search OWASP Description
+	if len(jsonResponse) == 0 {
+		for _, owaspDescription := range searchTerm.OWASPDescription {
+			response, err := SearchAPI(owaspDescription)
+			if err != nil {
+				fmt.Printf("Error reading response body: %v\n", err)
+				return searchResult, err
+			}
+
+			var jsonResponse []apiresponse.Vulnerability
+			if err := json.Unmarshal(response, &jsonResponse); err != nil {
+				fmt.Printf("Error unmarshaling JSON: %v\n", err)
+				return searchResult, err
+			}
+			// If API search isn't empty, return result
+			if len(jsonResponse) > 0 {
+				searchResult.ResultJson = jsonResponse
+				return searchResult, nil
+			}
+		}
+	}
+	searchResult.ResultJson = jsonResponse
 	return searchResult, nil
 }

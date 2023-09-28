@@ -2,7 +2,7 @@ package message
 
 import (
 	"fmt"
-	apiresponse "sandbox/pkg/apireponse"
+	"sandbox/pkg/apiresponse"
 	"sandbox/pkg/sarif"
 	"sandbox/pkg/search"
 	"strings"
