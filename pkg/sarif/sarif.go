@@ -1,5 +1,10 @@
 package sarif
 
+import (
+	"reflect"
+	"strings"
+)
+
 type Sarif struct {
 	Schema  string `json:"$schema"`
 	Version string `json:"version"`
@@ -92,4 +97,63 @@ type ArtifactLocation struct {
 
 type RunsProperties struct {
 	SemmleFormatSpecific string `json:"semmle.formatSpecifier"`
+}
+
+func RemoveNullFields(v reflect.Value) {
+	switch v.Kind() {
+	case reflect.Ptr:
+		if v.IsNil() {
+			return
+		}
+		RemoveNullFields(v.Elem())
+	case reflect.Interface:
+		if v.IsNil() {
+			return
+		}
+		RemoveNullFields(v.Elem())
+	case reflect.Struct:
+		for i := 0; i < v.NumField(); i++ {
+			field := v.Field(i)
+			if field.Kind() == reflect.Ptr && field.IsNil() {
+				// Replace nil pointer with zero value of its type
+				field.Set(reflect.New(field.Type().Elem()))
+			} else if field.Kind() == reflect.Slice && field.IsNil() {
+				// Replace nil slice with empty slice of its type
+				field.Set(reflect.MakeSlice(field.Type(), 0, 0))
+			} else {
+				RemoveNullFields(field)
+			}
+		}
+	case reflect.Slice:
+		for i := 0; i < v.Len(); i++ {
+			RemoveNullFields(v.Index(i))
+		}
+	case reflect.Map:
+		for _, key := range v.MapKeys() {
+			RemoveNullFields(v.MapIndex(key))
+		}
+	}
+}
+
+func RemoveEmptyResults(sarifData Sarif) Sarif {
+	var updatedSarif Sarif
+	updatedSarif.Schema = sarifData.Schema
+	updatedSarif.Version = sarifData.Version
+	for _, run := range sarifData.Runs {
+		for i := 0; i < len(run.Results); i++ {
+			result := run.Results[i]
+			for j := 0; j < len(run.Tool.Driver.Rules); j++ {
+				rule := run.Tool.Driver.Rules[j]
+				if result.RuleId == rule.ID && !strings.HasPrefix(rule.ShortDescription.Text, "SecDim") {
+					// Remove result if rule ID matches and short description does not start with "SecDim"
+					run.Results = append(run.Results[:i], run.Results[i+1:]...)
+					i-- // Decrement i to account for the removed element
+					break
+				}
+			}
+		}
+		RemoveNullFields(reflect.ValueOf(&run))
+		updatedSarif.Runs = append(updatedSarif.Runs, run)
+	}
+	return updatedSarif
 }
