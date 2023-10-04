@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"sandbox/pkg/globals"
 	"sandbox/pkg/message"
 	"sandbox/pkg/sarif"
 	"sandbox/pkg/search"
@@ -20,10 +21,10 @@ Usage:
 	}
 	arg1 := os.Args[1]
 	arg2 := os.Args[2]
-	
+
 	inSarifFile, err := sarif.ReadSarifFile(arg1)
 	if err != nil {
-		fmt.Errorf("Exiting...\n")
+		fmt.Printf("Exiting...\n")
 		os.Exit(1)
 	}
 	v := reflect.ValueOf(&inSarifFile).Elem()
@@ -32,7 +33,7 @@ Usage:
 	var searchTerms = search.ParseSarifStruct(inSarifFile)
 	var searchResults []search.SearchResult
 
-	resultCount	:= 0
+	resultCount := 0
 	for _, searchTerm := range searchTerms {
 		result, err := search.GetSearchResults(searchTerm)
 
@@ -41,28 +42,28 @@ Usage:
 		}
 		if len(result.ResultJson) > 0 {
 			if len(result.ResultJson) == 1 {
-				fmt.Printf("Found %d result\n", len(result.ResultJson))
+				fmt.Printf("Found %d API search results\n", len(result.ResultJson))
 			} else {
-				fmt.Printf("Found %d results\n", len(result.ResultJson))
+				fmt.Printf("Found %d API search results\n", len(result.ResultJson))
 			}
 			searchResults = append(searchResults, result)
 			resultCount++
 		}
 	}
 
-	if (resultCount == 0) {
+	if resultCount == 0 {
 		fmt.Printf("No results found\n")
-	} else if (resultCount == 1) {
-		fmt.Printf("Found 1 total result\n")
+	} else if resultCount == 1 {
+		fmt.Printf("Found 1 total vulnerability search result\n")
 	} else {
-		fmt.Printf("Found %d total results\n", resultCount)
+		fmt.Printf("Found %d total vulnerability search results\n", resultCount)
 	}
 
 	outSarifFile := message.UpdateOutputSarifHelpMessage(inSarifFile, searchResults)
 	cleanedSarif := sarif.RemoveEmptyResults(outSarifFile)
 	sarif.WriteSarifFile(arg2, cleanedSarif)
-	
-	fmt.Printf("Please visit https://play.secdim.com/sandbox to explore and debug other security vulnerabilities with SecDim Sandbox\n")
+
+	fmt.Printf("Please visit " + globals.SANDBOX_URL + " to explore and debug other security vulnerabilities with SecDim Sandbox\n")
 
 	os.Exit(0)
 }
