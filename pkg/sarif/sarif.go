@@ -137,7 +137,7 @@ func RemoveNullFields(v reflect.Value) {
 }
 
 func RemoveEmptyResults(sarifData Sarif) Sarif {
-	fmt.Printf("Cleaning up output SARIF file")
+	fmt.Printf("Cleaning up output SARIF file\n")
 	var updatedSarif Sarif
 	updatedSarif.Schema = sarifData.Schema
 	updatedSarif.Version = sarifData.Version
