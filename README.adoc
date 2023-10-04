@@ -7,6 +7,7 @@ This application will take a SARIF file as input, parse it, and output a SARIF f
 == Usage
 
 1. Make sure you already have Go installed. See https://go.dev/doc/install[Go's official website] for more information.
-2. Clone this repository and navigate to the repositories directory.
+2. Clone this repository and navigate to the repository directory.
 3. Compile the application using the `go build` command.
-4. Run the application using `./sandbox input_file.sarif output_file.sarif`
+4. Run the application using `./sandbox input_file.sarif output_file.sarif`.
+5. Enjoy exploring and debugging vulnerabilities in https://play.secdim.com/sandbox/[SecDim Sandbox]!
