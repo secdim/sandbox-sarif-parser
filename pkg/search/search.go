@@ -26,6 +26,7 @@ type SearchResult struct {
 }
 
 func ParseSarifStruct(sarif sarif.Sarif) []SearchTerm {
+	fmt.Printf("Parsing SARIF file for search terms\n")
 	var searchTerms []SearchTerm
 	for _, result := range sarif.Runs[0].Results {
 		for _, rule := range sarif.Runs[0].Tool.Driver.Rules {
@@ -67,14 +68,14 @@ func SearchAPI(searchTerm string) ([]byte, error) {
 
 	response, err := http.Get(url + searchTerm)
 	if err != nil {
-		fmt.Printf("Error sending GET request: %v\n", err)
+		fmt.Errorf("Error sending GET request: %v\n", err)
 		return nil, err
 	}
 	defer response.Body.Close()
 
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
-		fmt.Printf("Error reading response body: %v\n", err)
+		fmt.Errorf("Error reading response body: %v\n", err)
 		return nil, err
 	}
 
@@ -82,6 +83,7 @@ func SearchAPI(searchTerm string) ([]byte, error) {
 }
 
 func GetSearchResults(searchTerm SearchTerm) (SearchResult, error) {
+	fmt.Printf("Searching for SecDim Sandbox related to SARIF Rule ID: %s\n", searchTerm.ID)
 	var searchResult = SearchResult{
 		RuleID: searchTerm.ID,
 		Title:  searchTerm.OWASPDescription[0],
@@ -90,13 +92,13 @@ func GetSearchResults(searchTerm SearchTerm) (SearchResult, error) {
 	// Initial API search, search CWE Description
 	response, err := SearchAPI(searchTerm.CWEDescription)
 	if err != nil {
-		fmt.Printf("Error reading response body: %v\n", err)
+		fmt.Errorf("Error reading response body: %v\n", err)
 		return searchResult, err
 	}
 
 	var jsonResponse []apiresponse.Vulnerability
 	if err := json.Unmarshal(response, &jsonResponse); err != nil {
-		fmt.Printf("Error unmarshaling JSON: %v\n", err)
+		fmt.Errorf("Error unmarshaling SARIF: %v\n", err)
 		return searchResult, err
 	}
 
@@ -105,13 +107,13 @@ func GetSearchResults(searchTerm SearchTerm) (SearchResult, error) {
 		for _, owaspDescription := range searchTerm.OWASPDescription {
 			response, err := SearchAPI(owaspDescription)
 			if err != nil {
-				fmt.Printf("Error reading response body: %v\n", err)
+				fmt.Errorf("Error reading response body: %v\n", err)
 				return searchResult, err
 			}
 
 			var jsonResponse []apiresponse.Vulnerability
 			if err := json.Unmarshal(response, &jsonResponse); err != nil {
-				fmt.Printf("Error unmarshaling JSON: %v\n", err)
+				fmt.Errorf("Error unmarshaling SARIF: %v\n", err)
 				return searchResult, err
 			}
 			// If API search isn't empty, return result

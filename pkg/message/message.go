@@ -28,6 +28,7 @@ func generateHelpTextMessage(result search.SearchResult) string {
 }
 
 func UpdateOutputSarifHelpMessage(outSarif sarif.Sarif, results []search.SearchResult) sarif.Sarif {
+	fmt.Printf("Updating output SARIF file with SecDim Sandbox information\n")
 	const HelpUri = "https://play.secdim.com/sandbox/"
 	for _, result := range results {
 		for _, run := range outSarif.Runs {
