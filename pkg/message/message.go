@@ -10,7 +10,6 @@ import (
 
 func generateHelpTextMessage(result search.SearchResult) string {
 	var builder strings.Builder
-	// builder.WriteString("Explore and debug the " + result.Title + " vulnerability on [SecDim Sandbox](" + globals.SANDBOX_URL)
 	urlSlug := ""
 
 	if len(result.ResultJson) == 1 {
