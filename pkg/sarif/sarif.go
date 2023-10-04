@@ -1,6 +1,7 @@
 package sarif
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 )
@@ -136,20 +137,25 @@ func RemoveNullFields(v reflect.Value) {
 }
 
 func RemoveEmptyResults(sarifData Sarif) Sarif {
+	fmt.Printf("Cleaning up output SARIF file")
 	var updatedSarif Sarif
 	updatedSarif.Schema = sarifData.Schema
 	updatedSarif.Version = sarifData.Version
 	for _, run := range sarifData.Runs {
 		for i := 0; i < len(run.Results); i++ {
 			result := run.Results[i]
+			foundResult := false
 			for j := 0; j < len(run.Tool.Driver.Rules); j++ {
 				rule := run.Tool.Driver.Rules[j]
-				if result.RuleId == rule.ID && !strings.HasPrefix(rule.ShortDescription.Text, "SecDim") {
-					// Remove result if rule ID matches and short description does not start with "SecDim"
-					run.Results = append(run.Results[:i], run.Results[i+1:]...)
-					i-- // Decrement i to account for the removed element
+				if result.RuleId == rule.ID && strings.HasPrefix(rule.ShortDescription.Text, "SecDim") {
+					foundResult = true
 					break
 				}
+			}
+			if !foundResult {
+				// Remove result if rule ID matches and short description does not start with "SecDim"
+				run.Results = append(run.Results[:i], run.Results[i+1:]...)
+				i-- // Decrement i to account for the removed element
 			}
 		}
 		RemoveNullFields(reflect.ValueOf(&run))

@@ -25,7 +25,6 @@ Usage:
 	if err != nil {
 		fmt.Errorf("Exiting...\n")
 		os.Exit(1)
-		// return
 	}
 	v := reflect.ValueOf(&inSarifFile).Elem()
 	sarif.RemoveNullFields(v)
@@ -38,7 +37,7 @@ Usage:
 		result, err := search.GetSearchResults(searchTerm)
 
 		if err != nil {
-			return
+			continue
 		}
 		if len(result.ResultJson) > 0 {
 			if len(result.ResultJson) == 1 {
@@ -50,11 +49,9 @@ Usage:
 			resultCount++
 		}
 	}
+
 	if (resultCount == 0) {
 		fmt.Printf("No results found\n")
-		fmt.Printf("No output SARIF file written\n")
-		fmt.Printf("Please visit https://play.secdim.com/sandbox to explore and debug other security vulnerabilities with SecDim Sandbox\n")
-		os.Exit(0)
 	} else if (resultCount == 1) {
 		fmt.Printf("Found 1 total result\n")
 	} else {
@@ -62,6 +59,10 @@ Usage:
 	}
 
 	outSarifFile := message.UpdateOutputSarifHelpMessage(inSarifFile, searchResults)
-	sarif.WriteSarifFile(arg2, outSarifFile)
+	cleanedSarif := sarif.RemoveEmptyResults(outSarifFile)
+	sarif.WriteSarifFile(arg2, cleanedSarif)
+	
+	fmt.Printf("Please visit https://play.secdim.com/sandbox to explore and debug other security vulnerabilities with SecDim Sandbox\n")
+
 	os.Exit(0)
 }

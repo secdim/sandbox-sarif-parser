@@ -35,9 +35,9 @@ func UpdateOutputSarifHelpMessage(outSarif sarif.Sarif, results []search.SearchR
 			for i := 0; i < len(run.Tool.Driver.Rules); i++ {
 				if run.Tool.Driver.Rules[i].ID == result.RuleID {
 					if len(result.ResultJson) == 1 {
-						run.Tool.Driver.Rules[i].ShortDescription.Text = "SecDim: " + result.ResultJson[0].Title
+						run.Tool.Driver.Rules[i].ShortDescription.Text = "SecDim Sandbox: " + result.ResultJson[0].Title
 					} else if len(result.ResultJson) > 1 {
-						run.Tool.Driver.Rules[i].ShortDescription.Text = "SecDim: " + result.Title
+						run.Tool.Driver.Rules[i].ShortDescription.Text = "SecDim Sandbox: " + result.Title
 					}
 					run.Tool.Driver.Rules[i].HelpUri = HelpUri
 					run.Tool.Driver.Rules[i].Help.Text = generateHelpTextMessage(result) + run.Tool.Driver.Rules[i].Help.Text
