@@ -10,10 +10,11 @@ import (
 
 func generateHelpTextMessage(result search.SearchResult) string {
 	var builder strings.Builder
-	builder.WriteString("Explore and debug the " + result.Title + " vulnerability on [SecDim Sandbox](" + globals.SANDBOX_URL)
+	// builder.WriteString("Explore and debug the " + result.Title + " vulnerability on [SecDim Sandbox](" + globals.SANDBOX_URL)
 	urlSlug := ""
 
 	if len(result.ResultJson) == 1 {
+		builder.WriteString("Explore and debug the " + result.ResultJson[0].Title + " vulnerability on [SecDim Sandbox](" + globals.SANDBOX_URL)
 		for i := 0; i < len(result.ResultJson[0].Sandboxes); i++ {
 			lowerRuleID := strings.ToLower(result.RuleID)
 			lowerLanguage := strings.ToLower(result.ResultJson[0].Sandboxes[i].Language)
@@ -31,6 +32,7 @@ func generateHelpTextMessage(result search.SearchResult) string {
 			}
 		}
 	} else if len(result.ResultJson) > 1 || urlSlug == "" {
+		builder.WriteString("Explore and debug the " + result.Title + " vulnerability on [SecDim Sandbox](" + globals.SANDBOX_URL)
 		urlSlug = "?search=" + strings.ReplaceAll(result.Title, " ", "%20")
 	}
 
