@@ -17,25 +17,34 @@ func generateHelpTextMessage(result search.SearchResult) string {
 		for i := 0; i < len(result.ResultJson[0].Sandboxes); i++ {
 			lowerRuleID := strings.ToLower(result.RuleID)
 			lowerLanguage := strings.ToLower(result.ResultJson[0].Sandboxes[i].Language)
+			// Split rule ID by '-' or '.'
+			splitFunc := func(c rune) bool {
+				return c == '-' || c == '.'
+			}
+			resultIDSplit := strings.FieldsFunc(lowerRuleID, splitFunc)
 
-			if strings.Contains(lowerRuleID, lowerLanguage) {
+			if containsString(resultIDSplit, lowerLanguage) {
 				urlSlug = result.ResultJson[0].Slug + "/id/" + fmt.Sprintf("%d", result.ResultJson[0].Sandboxes[i].ID)
 				break
 			}
 
 			for _, tech := range result.ResultJson[0].Sandboxes[i].Technologies {
-				if strings.Contains(lowerRuleID, strings.ToLower(tech)) {
+				if containsString(resultIDSplit, tech) {
 					urlSlug = result.ResultJson[0].Slug + "/id/" + fmt.Sprintf("%d", result.ResultJson[0].Sandboxes[i].ID)
 					break
 				}
 			}
 		}
-	} else if len(result.ResultJson) > 1 || urlSlug == "" {
+
+		if urlSlug == "" {
+			urlSlug = "?search=" + cleanSearchTerm(result.Title)
+		}
+	} else if len(result.ResultJson) > 1 {
 		builder.WriteString("Explore and debug the " + result.Title + " vulnerability on [SecDim Sandbox](" + globals.SANDBOX_URL)
-		urlSlug = "?search=" + strings.ReplaceAll(result.Title, " ", "%20")
+		urlSlug = "?search=" + cleanSearchTerm(result.Title)
 	}
 
-	builder.WriteString(urlSlug + "/)\n\n")
+	builder.WriteString(urlSlug + ")\n\n")
 	return builder.String()
 }
 
@@ -59,4 +68,31 @@ func UpdateOutputSarifHelpMessage(outSarif sarif.Sarif, results []search.SearchR
 	}
 
 	return outSarif
+}
+
+func trimSearchTitlePrefix(title string) string {
+	prefixes := []string{"CWE-", "OWASP-"}
+	for _, prefix := range prefixes {
+		title = strings.TrimPrefix(title, prefix)
+	}
+	return title
+}
+
+func containsString(arr []string, givenStr string) bool {
+	for _, str := range arr {
+		if str == givenStr {
+			return true
+		}
+	}
+	return false
+}
+
+func cleanSearchTerm(term string) string {
+	term = trimSearchTitlePrefix(term)
+	term = strings.ReplaceAll(term, " ", "%20")
+	term = strings.ReplaceAll(term, "'", "")
+	term = strings.ReplaceAll(term, "\"", "")
+	term = strings.ReplaceAll(term, "(", "")
+	term = strings.ReplaceAll(term, ")", "")
+	return term
 }

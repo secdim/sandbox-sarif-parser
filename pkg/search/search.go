@@ -85,20 +85,18 @@ func GetSearchResults(searchTerm SearchTerm) (SearchResult, error) {
 	fmt.Printf("Searching for SecDim Sandbox related to SARIF Rule ID: %s\n", searchTerm.ID)
 	var searchResult = SearchResult{
 		RuleID: searchTerm.ID,
-		Title:  searchTerm.CWEDescription[0],
 	}
 
 	var jsonResponse []apiresponse.Vulnerability
 
 	// Initial API search, search CWE Description
-	for _, cweDescription := range searchTerm.CWEDescription {
-		response, err := SearchAPI(cweDescription)
+	for i := 0; i < len(searchTerm.CWEDescription); i++ {
+		response, err := SearchAPI(searchTerm.CWEDescription[i])
 		if err != nil {
 			fmt.Printf("Error reading response body: %v\n", err)
 			return searchResult, err
 		}
 
-		// var jsonResponse []apiresponse.Vulnerability
 		if err := json.Unmarshal(response, &jsonResponse); err != nil {
 			fmt.Printf("Error unmarshaling SARIF: %v\n", err)
 			return searchResult, err
@@ -107,14 +105,14 @@ func GetSearchResults(searchTerm SearchTerm) (SearchResult, error) {
 		// If API search isn't empty, return result
 		if len(jsonResponse) > 0 {
 			searchResult.ResultJson = jsonResponse
-			searchResult.Title = cweDescription
+			searchResult.Title = "CWE-" + searchTerm.CWECode[i] + " " + searchTerm.CWEDescription[i]
 			return searchResult, nil
 		}
 	}
 
 	if len(jsonResponse) == 0 {
-		for _, owaspDescription := range searchTerm.OWASPDescription {
-			response, err := SearchAPI(owaspDescription)
+		for i := 0; i < len(searchTerm.OWASPDescription); i++ {
+			response, err := SearchAPI(searchTerm.OWASPDescription[i])
 			if err != nil {
 				fmt.Printf("Error reading response body: %v\n", err)
 				return searchResult, err
@@ -128,7 +126,7 @@ func GetSearchResults(searchTerm SearchTerm) (SearchResult, error) {
 			// If API search isn't empty, return result
 			if len(jsonResponse) > 0 {
 				searchResult.ResultJson = jsonResponse
-				searchResult.Title = owaspDescription
+				searchResult.Title = "OWASP-" + searchTerm.OWASPCode[i] + " " + searchTerm.OWASPDescription[i]
 				return searchResult, nil
 			}
 		}
