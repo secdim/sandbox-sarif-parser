@@ -2,7 +2,7 @@
 
 == Description
 
-This application will take a SARIF file as input, parse it, and output a SARIF file with links to the relevant SecDim Sandboxes to explore the detected vulnerabilities.
+This application will take a SARIF file as input, parse it, and output a SARIF file with links to the relevant SecDim Sandbox to explore the detected vulnerabilities.
 
 == Usage
 
