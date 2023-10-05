@@ -60,8 +60,10 @@ func UpdateOutputSarifHelpMessage(outSarif sarif.Sarif, results []search.SearchR
 						run.Tool.Driver.Rules[i].ShortDescription.Text = "SecDim Sandbox: " + result.Title
 					}
 					run.Tool.Driver.Rules[i].HelpUri = globals.SANDBOX_URL
-					run.Tool.Driver.Rules[i].Help.Text = generateHelpTextMessage(result) + run.Tool.Driver.Rules[i].Help.Text
-					run.Tool.Driver.Rules[i].Help.Markdown = generateHelpTextMessage(result) + run.Tool.Driver.Rules[i].Help.Markdown
+					if !strings.Contains(run.Tool.Driver.Rules[i].Help.Text, "SecDim Sandbox") {
+						run.Tool.Driver.Rules[i].Help.Text = generateHelpTextMessage(result) + run.Tool.Driver.Rules[i].Help.Text
+						run.Tool.Driver.Rules[i].Help.Markdown = generateHelpTextMessage(result) + run.Tool.Driver.Rules[i].Help.Markdown
+					}
 				}
 			}
 		}
