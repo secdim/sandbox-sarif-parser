@@ -86,8 +86,12 @@
                 "artifactLocation": {
                   "uri": "test/test",
                   "uriBaseId": "%SRCROOT%",
-                  "index": 0
-                }
+                  "description": {
+                    "text": ""
+                  }
+                },
+                "region": {},
+                "contextRegion": {}
               }
             }
           ]

@@ -29803,8 +29803,17 @@
                 "artifactLocation": {
                   "uri": "src/program/views.py",
                   "uriBaseId": "%SRCROOT%",
-                  "index": 0
-                }
+                  "description": {
+                    "text": ""
+                  }
+                },
+                "region": {
+                  "startLine": 24,
+                  "startColumn": 12,
+                  "endLine": 24,
+                  "endColumn": 78
+                },
+                "contextRegion": {}
               }
             }
           ]
@@ -29821,8 +29830,17 @@
                 "artifactLocation": {
                   "uri": "src/program/views.py",
                   "uriBaseId": "%SRCROOT%",
-                  "index": 0
-                }
+                  "description": {
+                    "text": ""
+                  }
+                },
+                "region": {
+                  "startLine": 24,
+                  "startColumn": 12,
+                  "endLine": 24,
+                  "endColumn": 78
+                },
+                "contextRegion": {}
               }
             }
           ]
@@ -29839,8 +29857,17 @@
                 "artifactLocation": {
                   "uri": "src/program/views.py",
                   "uriBaseId": "%SRCROOT%",
-                  "index": 0
-                }
+                  "description": {
+                    "text": ""
+                  }
+                },
+                "region": {
+                  "startLine": 24,
+                  "startColumn": 25,
+                  "endLine": 24,
+                  "endColumn": 65
+                },
+                "contextRegion": {}
               }
             }
           ]
@@ -29848,7 +29875,12 @@
       ],
       "properties": {
         "semmle.formatSpecifier": ""
-      }
+      },
+      "invocations": [
+        {
+          "executionSuccessful": true
+        }
+      ]
     }
   ]
 }

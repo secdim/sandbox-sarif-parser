@@ -16,7 +16,15 @@ type Runs struct {
 	Tool           Tool           `json:"tool"`
 	Artifacts      []Artifact     `json:"artifacts"`
 	Results        []Result       `json:"results"`
-	RunsProperties RunsProperties `json:"properties"`
+	RunsProperties RunsProperties `json:"properties,omitempty"`
+	Invocations    []Invocation   `json:"invocations,omitempty"`
+}
+
+type Invocation struct {
+	CommandLine string `json:"commandLine,omitempty"`
+	StartTimeUtc string `json:"startTimeUtc,omitempty"`
+	EndTimeUtc   string `json:"endTimeUtc,omitempty"`
+	ExecutionSuccessful bool `json:"executionSuccessful,omitempty"`
 }
 
 type Tool struct {
@@ -24,8 +32,10 @@ type Tool struct {
 }
 
 type Driver struct {
-	Name  string  `json:"name"`
-	Rules []Rules `json:"rules"`
+	Name           string  `json:"name"`
+	Version        string  `json:"version,omitempty"`
+	InformationUri string  `json:"informationUri,omitempty"`
+	Rules          []Rules `json:"rules"`
 }
 
 type Rules struct {
@@ -88,12 +98,24 @@ type Locations struct {
 
 type PhysicalLocation struct {
 	ArtifactLocation ArtifactLocation `json:"artifactLocation"`
+	Region           Region           `json:"region,omitempty"`
+	ContextRegion    Region           `json:"contextRegion,omitempty"`
 }
 
 type ArtifactLocation struct {
-	Uri       string `json:"uri"`
-	UriBaseId string `json:"uriBaseId"`
-	Index     int    `json:"index"`
+	Uri         string `json:"uri"`
+	UriBaseId   string `json:"uriBaseId,omitempty"`
+	Index       int    `json:"index,omitempty"`
+	Description Message `json:"description,omitempty"`
+}
+
+type Region struct {
+	StartLine   int `json:"startLine,omitempty"`
+	StartColumn int `json:"startColumn,omitempty"`
+	EndLine     int `json:"endLine,omitempty"`
+	EndColumn   int `json:"endColumn,omitempty"`
+	ByteOffset  int `json:"byteOffset,omitempty"`
+	ByteLength  int `json:"byteLength,omitempty"`
 }
 
 type RunsProperties struct {
