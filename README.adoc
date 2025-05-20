@@ -1,13 +1,107 @@
-= Sandbox SARIF Parser
+= SecDim Sandbox 💎
+:toc:
+:toclevels: 2
 
 == Description
+SecDim Sandbox command-line application provides two main functions:
 
-This application will take a SARIF file as input, parse it, and output a SARIF file with links to the relevant SecDim Sandbox to explore the detected vulnerabilities.
+* *enrich*: Parses a SARIF file, enriches each finding with links to SecDim Secure Coding  exercises, and outputs an augmented SARIF file.
+* *jit*: Manages Just-In-Time training games on the SecDim platform by creating or updating a game and adding relevant challenge slugs extracted from a SARIF file.
+
+Both features can be used manually or integrated into CI/CD pipelines.
+
+== Installation
+
+. Ensure you have Go (`>=1.20`) installed: https://go.dev/doc/install[Go installation docs].
+. Clone this repository and navigate to the project root
+. Build the binary: `make build`
+
+[source,bash]
+----
+git clone https://github.com/secdim/sandbox-sarif-parser.git
+cd sandbox-sarif-parser
+make build
+----
+
+The compiled binary is placed in `bin/sandbox` directory.
 
 == Usage
 
-1. Make sure you already have Go installed. See https://go.dev/doc/install[Go's official website] for more information.
-2. Clone this repository and navigate to the repository directory.
-3. Compile the application using the `go build` command.
-4. Run the application using `./sandbox input_file.sarif output_file.sarif`.
-5. Enjoy exploring and debugging vulnerabilities in https://play.secdim.com/sandbox/[SecDim Sandbox]!
+=== Enrich SARIF
+Parse and enrich a SARIF file with SecDim Secure Coding labs
+
+`sandbox enrich --in <input.sarif> --out <output.sarif>`
+
+=== JIT Game Management
+
+Extract challenge slugs from a SARIF file and either create or update a SecDim game
+
+[source,bash]
+----
+sandbox jit --game-slug <slug> [--new] --in <input.sarif> 
+            [--game-title <title>] 
+            [--game-desc <desc>] 
+            [--game-tags <t1,t2>] 
+            [--game-deps <d1,d2>] 
+            [--game-chals <c1, c2>]
+            [--game-start <RFC3339>] [--game-end <RFC3339>]
+----
+
+* Add `--new` to create a fresh game (requires title, description, challenges, start/end).
+* Omit `--new` to patch an existing game (will error if the game does not exist).
+
+== Environment Variables
+Override defaults via environment variables (flags take precedence):
+
+[cols="1,3",options="header"]
+|===
+|Variable | Description
+|`SECDIM_API_KEY`         | API key for enrichment & game endpoints (required)
+|`JIT_GAME_SLUG`        | Default game slug
+|`JIT_GAME_TITLE`       | Default game title
+|`JIT_GAME_DESC`        | Default game description
+|`JIT_GAME_CHALS`       | Default game challenges
+|`JIT_GAME_TAGS`        | Default game tags
+|`JIT_GAME_DEPARTMENTS` | Default game departments
+|`JIT_GAME_START_TIME`  | Default start time
+|`JIT_GAME_END_TIME`    | Default end time
+|===
+
+== Examples
+
+=== Create a new training game and populate it with challenges
+[source,bash]
+----
+export SECDIM_API_KEY=XYZ
+sandbox jit --new --game-slug just-in-time-training 
+             --game-title "Just-In-Time Training" 
+             --game-desc "Exercises based on reported vulnerabilities" 
+             --game-tags Trivial,Easy,Medium,Hard 
+             --game-start 2025-05-06T00:00:00Z 
+             --game-end   2025-06-06T00:00:00Z 
+             --game-chals "xsspy,xssjs"
+             --in report.sarif
+----
+
+=== Updating an existing game based on new vulnerabilities
+[source,bash]
+----
+sandbox jit --game-slug just-in-time-training --in report.sarif
+----
+
+== CI/CD Integration
+In your GitHub Actions (or other CI), you can add steps like:
+
+[source,yaml]
+----
+- name: Build
+  run: make build
+
+- name: Enrich SARIF
+  run: sandbox enrich --in report.sarif --out enriched_report.sarif
+
+- name: Update JIT Game
+  run: |
+    export SECDIM_API_KEY=${{ secrets.SEC_DIM_API_KEY }}
+    sandbox jit --game-slug my-jit-game --in enriched_report.sarif
+----

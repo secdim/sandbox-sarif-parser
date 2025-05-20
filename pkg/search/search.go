@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"sandbox/pkg/apiresponse"
 	"sandbox/pkg/globals"
 	"sandbox/pkg/sarif"
@@ -65,12 +66,27 @@ func ParseSarifStruct(sarif sarif.Sarif) []SearchTerm {
 }
 
 func SearchAPI(searchTerm string) ([]byte, error) {
-	response, err := http.Get(globals.API_URL + searchTerm)
+	u, err := url.Parse(globals.SEARCH_API_URL)
+	if err != nil {
+		return nil, err
+	}
+	q := u.Query()
+	q.Set("search", searchTerm)
+	q.Set("catalog", "true")
+	u.RawQuery = q.Encode()
+
+	fmt.Printf("Requesting: %s\n", u.String())
+	response, err := http.Get(u.String())
 	if err != nil {
 		fmt.Printf("Error sending GET request: %v\n", err)
 		return nil, err
 	}
 	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusOK {
+		fmt.Printf("Error sending GET request: %s\n", response.Status)
+		return nil, err
+	}
 
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
@@ -82,7 +98,7 @@ func SearchAPI(searchTerm string) ([]byte, error) {
 }
 
 func GetSearchResults(searchTerm SearchTerm) (SearchResult, error) {
-	fmt.Printf("Searching for SecDim Sandbox related to SARIF Rule ID: %s\n", searchTerm.ID)
+	fmt.Printf("Searching for SecDim related to SARIF Rule ID: %s\n", searchTerm.ID)
 	var searchResult = SearchResult{
 		RuleID: searchTerm.ID,
 	}

@@ -21,10 +21,12 @@ type Tag struct {
 }
 
 type Sandbox struct {
-	ID           int          `json:"id"`
-	SandboxTags  []SandboxTag `json:"tags"`
-	Language     string       `json:"language"`
-	Technologies []string     `json:"technologies"`
+	ID            int          `json:"id"`
+	SandboxTags   []SandboxTag `json:"tags"`
+	Language      string       `json:"language"`
+	Technologies  []string     `json:"technologies"`
+	ChallengeSlug *string      `json:"challengeSlug,omitempty"`
+	GameSlug      *string      `json:"gameSlug,omitempty"`
 }
 
 type SandboxTag struct {
