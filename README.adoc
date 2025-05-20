@@ -1,6 +1,7 @@
 = SecDim Sandbox 💎
-:toc:
-:toclevels: 2
+
+SecDim Sandbox provides *Just In Time (JIT)* secure coding training labs  based on the finding reported by majority of security scanning tool. 
+It can also enrich the reported findings with link to related secure coding exercises.
 
 == Description
 SecDim Sandbox command-line application provides two main functions:
