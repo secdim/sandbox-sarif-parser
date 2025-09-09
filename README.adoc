@@ -11,13 +11,12 @@ SecDim Sandbox command-line application provides two main functions:
 
 Both features can be used manually or integrated into CI/CD pipelines.
 
-
-
 == Installation
 
 . Ensure you have Go (`>=1.20`) installed: https://go.dev/doc/install[Go installation docs].
 . Clone this repository and navigate to the project root
 . Build the binary: `make build`
+
 
 [source,bash]
 ----
@@ -33,9 +32,12 @@ The compiled binary is `bin/sandbox`.
 === Enrich SARIF
 Parse and enrich a SARIF file with SecDim Secure Coding labs
 
-`sandbox enrich --in <input.sarif> --out <output.sarif> [--tool <tool>]`
+[source,bash]
+----
+sandbox enrich --in <input.sarif> --out <output.sarif> [--tool <tool>]
+----
 
-* `--tool <tool>`: (optional) specify the tool name to help with enrichment. Currently supported tools: `codeql`, `semgrep`, `snyk`. If omitted, the tool will be auto-detected from the SARIF file.
+* `--tool` is optional - specify `semgrep`, `snyk`, or `codeql` to override auto-detection
 
 === JIT Game Management
 
@@ -50,12 +52,13 @@ sandbox jit --game-slug <slug> [--new] --in <input.sarif>
             [--game-deps <d1,d2>] 
             [--game-chals <c1, c2>]
             [--game-start <RFC3339>] [--game-end <RFC3339>]
-            [--filter-by-language]
+            [--filter-by-language] [--tool <tool>]
 ----
 
 * Add `--new` to create a fresh game (requires title, description, challenges, start/end).
 * Omit `--new` to patch an existing game (will error if the game does not exist).
 * Add `--filter-by-language` to filter challenges based on programming languages detected from the SARIF file. If this flag is not provided, all challenges matching any detected language will be included. We recommend using this flag to ensure the training content is relevant to the codebase.
+* `--tool` is optional - specify `semgrep`, `snyk`, or `codeql` to override auto-detection
 
 
 **Example with language filtering:**
@@ -65,6 +68,33 @@ sandbox jit --game-slug python-security-training --filter-by-language --in repor
 ----
 
 If the SARIF file contains Python vulnerabilities, only Python-related challenges will be added to the game.
+
+== Supported Tools
+
+SecDim Sandbox supports SARIF files from various security scanning tools:
+
+=== Fully Supported Tools
+* **Semgrep** - Comprehensive rule parsing with CWE and OWASP mapping
+* **Snyk Code** - Rule-based vulnerability detection with metadata extraction  
+* **CodeQL** - GitHub's semantic analysis engine with extension-based rules
+
+=== Auto-Detection
+The tool automatically detects the scanner type based on SARIF structure:
+- Driver name patterns (`semgrep`, `snyk code`, `codeql`)
+- Rule organization and metadata structure
+- Tool-specific SARIF formatting
+
+=== Unsupported/Unknown Tools
+For SARIF files from other tools (Bandit, ESLint, SonarQube, etc.):
+- The system detects them as "unknown tool"  
+- Falls back to generic parsing using Semgrep-compatible logic
+- **May still work** if the SARIF structure includes standard fields like:
+  - Rule IDs and descriptions
+  - CWE tags in `properties.tags` (format: `"CWE-79"`)
+  - OWASP tags in `properties.tags` (format: `"OWASP:A03"`)
+
+
+**Note**: You can also explicitly specify the tool with `--tool <tool>` to override auto-detection. We will add support for more tools over time.
 
 == Environment Variables
 Override defaults via environment variables (flags take precedence):
@@ -106,8 +136,21 @@ sandbox jit --new --game-slug just-in-time-training
 sandbox jit --game-slug just-in-time-training --in report.sarif --filter-by-language
 ----
 
+=== Working with unsupported tools
+[source,bash]
+----
+# For tools not directly supported, the system falls back to generic parsing
+sandbox enrich --in bandit-report.sarif --out enriched-bandit.sarif
+
+# You can also explicitly specify a compatible tool format for enrichment
+sandbox enrich --in custom-tool.sarif --out enriched-custom.sarif --tool semgrep
+
+# Force Semgrep-style parsing for JIT with unknown tools
+sandbox jit --game-slug custom-training --tool semgrep --filter-by-language --in custom-tool.sarif
+----
+
 == CI/CD Integration
-In your GitHub Actions (or other CI), you can add steps like:
+In your GitHub Actions you can add steps like:
 
 [source,yaml]
 ----

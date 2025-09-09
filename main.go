@@ -94,6 +94,7 @@ func main() {
 		start := jitCmd.String("game-start", globals.GetEnv("JIT_GAME_START_TIME", ""), "start time (RFC3339)")
 		end := jitCmd.String("game-end", globals.GetEnv("JIT_GAME_END_TIME", ""), "end time (RFC3339)")
 		inSarifPath := jitCmd.String("in", "", "input SARIF file path to extract challenges")
+		tool := jitCmd.String("tool", "", "scanner tool (semgrep, snyk, codeql) - auto-detected if not specified")
 		newGame := jitCmd.Bool("new", false, "create a new game if it does not already exist")
 		filterByLanguage := jitCmd.Bool("filter-by-language", false, "filter challenges by detected languages from SARIF file")
 		jitCmd.Parse(os.Args[2:])
@@ -217,7 +218,7 @@ func main() {
 			}
 		}
 
-		terms := search.ParseSarifStruct(inSarif, "")
+		terms := search.ParseSarifStruct(inSarif, *tool)
 		challengeSet := make(map[string]struct{})
 		for _, term := range terms {
 			res, err := search.GetSearchResults(term)
@@ -326,7 +327,7 @@ func printUsage() {
   sandbox enrich --in <input.sarif> --out <output.sarif> [--tool <tool>]
   sandbox jit --game-slug <slug> [--game-title <title>] [--game-desc <desc>] [--game-tags <t1,t2>] \
     [--game-deps <d1,d2>] [--game-chals <c1,c2>] [--game-start <RFC3339>] [--game-end <RFC3339>] [--new] \
-    [--filter-by-language] --in <input.sarif>
+    [--filter-by-language] [--tool <tool>] --in <input.sarif>
 
 Options:
   --tool <tool>				Security scanner tool (semgrep, snyk, codeql). Auto-detected if not specified.
