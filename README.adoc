@@ -11,6 +11,8 @@ SecDim Sandbox command-line application provides two main functions:
 
 Both features can be used manually or integrated into CI/CD pipelines.
 
+
+
 == Installation
 
 . Ensure you have Go (`>=1.20`) installed: https://go.dev/doc/install[Go installation docs].
