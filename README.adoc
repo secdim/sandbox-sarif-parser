@@ -33,7 +33,7 @@ The compiled binary is `bin/sandbox`.
 === Enrich SARIF
 Parse and enrich a SARIF file with SecDim Secure Coding labs
 
-`sandbox enrich --in <input.sarif> --out <output.sarif>`
+`sandbox enrich --in <input.sarif> --out <output.sarif> [--tool <tool>]`
 
 === JIT Game Management
 
@@ -49,6 +49,7 @@ sandbox jit --game-slug <slug> [--new] --in <input.sarif>
             [--game-chals <c1, c2>]
             [--game-start <RFC3339>] [--game-end <RFC3339>]
             [--filter-by-language]
+           
 ----
 
 * Add `--new` to create a fresh game (requires title, description, challenges, start/end).
