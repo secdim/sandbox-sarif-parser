@@ -35,6 +35,8 @@ Parse and enrich a SARIF file with SecDim Secure Coding labs
 
 `sandbox enrich --in <input.sarif> --out <output.sarif> [--tool <tool>]`
 
+* `--tool <tool>`: (optional) specify the tool name to help with enrichment. Currently supported tools: `codeql`, `semgrep`, `snyk`. If omitted, the tool will be auto-detected from the SARIF file.
+
 === JIT Game Management
 
 Extract challenge slugs from a SARIF file and either create or update a SecDim game
@@ -49,7 +51,6 @@ sandbox jit --game-slug <slug> [--new] --in <input.sarif>
             [--game-chals <c1, c2>]
             [--game-start <RFC3339>] [--game-end <RFC3339>]
             [--filter-by-language]
-           
 ----
 
 * Add `--new` to create a fresh game (requires title, description, challenges, start/end).
