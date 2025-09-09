@@ -342,8 +342,15 @@ func SearchAPIWithParams(cwe, owasp, search string) ([]byte, error) {
 	return body, nil
 }
 
-func GetSearchResults(searchTerm SearchTerm) (SearchResult, error) {
+func GetSearchResults(searchTerm SearchTerm, tool string) (SearchResult, error) {
 	fmt.Printf("Searching for SecDim related to SARIF Rule ID: %s\n", searchTerm.ID)
+	
+	// Semgrep-specific search strategy: CWE -> Title -> OWASP
+	if tool == "semgrep" {
+		return getSemgrepSearchResults(searchTerm)
+	}
+
+	// Default search strategy for other tools (existing logic)
 	var searchResult = SearchResult{
 		RuleID: searchTerm.ID,
 	}
@@ -483,6 +490,92 @@ func GetSearchResults(searchTerm SearchTerm) (SearchResult, error) {
 		}
 	}
 
+	searchResult.ResultJson = jsonResponse // Will be empty
+	return searchResult, nil
+}
+
+// getSemgrepSearchResults implements Semgrep-specific search strategy:
+// 1. CWE search first (highest priority)
+// 2. Free text search on rule title (if no CWE results)
+// 3. OWASP search (if no title results)
+func getSemgrepSearchResults(searchTerm SearchTerm) (SearchResult, error) {
+	var searchResult = SearchResult{
+		RuleID: searchTerm.ID,
+	}
+	var jsonResponse []apiresponse.Vulnerability
+
+	// 1. Search by CWE first (highest priority)
+	for i, cweCode := range searchTerm.CWECode {
+		response, err := SearchAPIWithParams(cweCode, "", "")
+		if err != nil {
+			fmt.Printf("Error searching by CWE %s: %v\n", cweCode, err)
+			continue
+		}
+
+		if err := json.Unmarshal(response, &jsonResponse); err != nil {
+			fmt.Printf("Error unmarshaling CWE search response: %v\n", err)
+			continue
+		}
+
+		if len(jsonResponse) > 0 {
+			searchResult.ResultJson = jsonResponse
+			if i < len(searchTerm.CWEDescription) && searchTerm.CWEDescription[i] != "" {
+				searchResult.Title = fmt.Sprintf("CWE-%s: %s", cweCode, searchTerm.CWEDescription[i])
+			} else {
+				searchResult.Title = fmt.Sprintf("CWE-%s", cweCode)
+			}
+			return searchResult, nil
+		}
+	}
+
+	// 2. Search by free text terms (rule names, descriptions) if no CWE results
+	for _, freeText := range searchTerm.FreeText {
+		if freeText == "" {
+			continue
+		}
+		response, err := SearchAPIWithParams("", "", freeText)
+		if err != nil {
+			fmt.Printf("Error searching by free text '%s': %v\n", freeText, err)
+			continue
+		}
+
+		if err := json.Unmarshal(response, &jsonResponse); err != nil {
+			fmt.Printf("Error unmarshaling free text search response: %v\n", err)
+			continue
+		}
+
+		if len(jsonResponse) > 0 {
+			searchResult.ResultJson = jsonResponse
+			searchResult.Title = fmt.Sprintf("Title: %s", freeText)
+			return searchResult, nil
+		}
+	}
+
+	// 3. Search by OWASP (if no title results)
+	for i, owaspCode := range searchTerm.OWASPCode {
+		response, err := SearchAPIWithParams("", owaspCode, "")
+		if err != nil {
+			fmt.Printf("Error searching by OWASP %s: %v\n", owaspCode, err)
+			continue
+		}
+
+		if err := json.Unmarshal(response, &jsonResponse); err != nil {
+			fmt.Printf("Error unmarshaling OWASP search response: %v\n", err)
+			continue
+		}
+
+		if len(jsonResponse) > 0 {
+			searchResult.ResultJson = jsonResponse
+			if i < len(searchTerm.OWASPDescription) && searchTerm.OWASPDescription[i] != "" {
+				searchResult.Title = fmt.Sprintf("OWASP-%s: %s", owaspCode, searchTerm.OWASPDescription[i])
+			} else {
+				searchResult.Title = fmt.Sprintf("OWASP-%s", owaspCode)
+			}
+			return searchResult, nil
+		}
+	}
+
+	// If nothing found, return empty result
 	searchResult.ResultJson = jsonResponse // Will be empty
 	return searchResult, nil
 }

@@ -74,7 +74,10 @@ If the SARIF file contains Python vulnerabilities, only Python-related challenge
 SecDim Sandbox supports SARIF files from various security scanning tools:
 
 === Fully Supported Tools
-* **Semgrep** - Comprehensive rule parsing with CWE and OWASP mapping
+* **Semgrep** - Comprehensive rule parsing with intelligent search strategy:
+  1. **CWE search** (highest priority for precise vulnerability matching)
+  2. **Free text search** on rule names/descriptions (contextual relevance)
+  3. **OWASP search** (broad category coverage as final fallback)
 * **Snyk Code** - Rule-based vulnerability detection with metadata extraction  
 * **CodeQL** - GitHub's semantic analysis engine with extension-based rules
 

@@ -57,7 +57,7 @@ func main() {
 
 		resultCount := 0
 		for _, searchTerm := range searchTerms {
-			result, err := search.GetSearchResults(searchTerm)
+			result, err := search.GetSearchResults(searchTerm, *tool)
 
 			if err != nil {
 				continue
@@ -221,7 +221,7 @@ func main() {
 		terms := search.ParseSarifStruct(inSarif, *tool)
 		challengeSet := make(map[string]struct{})
 		for _, term := range terms {
-			res, err := search.GetSearchResults(term)
+			res, err := search.GetSearchResults(term, *tool)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "error searching term %s: %v\n", term.ID, err)
 				continue
