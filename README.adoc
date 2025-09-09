@@ -1,6 +1,6 @@
 = SecDim Sandbox 💎
 
-SecDim Sandbox provides *Just In Time (JIT)* secure coding training labs  based on the finding reported by majority of security scanning tool. 
+SecDim Sandbox provides *Just In Time (JIT)* secure coding training labs based on the finding reported by majority of security scanning tool. 
 It can also enrich the reported findings with link to related secure coding exercises.
 
 == Description
@@ -24,7 +24,7 @@ cd sandbox-sarif-parser
 make build
 ----
 
-The compiled binary is placed in `bin/sandbox` directory.
+The compiled binary is `bin/sandbox`.
 
 == Usage
 
@@ -46,10 +46,21 @@ sandbox jit --game-slug <slug> [--new] --in <input.sarif>
             [--game-deps <d1,d2>] 
             [--game-chals <c1, c2>]
             [--game-start <RFC3339>] [--game-end <RFC3339>]
+            [--filter-by-language]
 ----
 
 * Add `--new` to create a fresh game (requires title, description, challenges, start/end).
 * Omit `--new` to patch an existing game (will error if the game does not exist).
+* Add `--filter-by-language` to filter challenges based on programming languages detected from the SARIF file. If this flag is not provided, all challenges matching any detected language will be included. We recommend using this flag to ensure the training content is relevant to the codebase.
+
+
+**Example with language filtering:**
+[source,bash]
+----
+sandbox jit --game-slug python-security-training --filter-by-language --in report.sarif
+----
+
+If the SARIF file contains Python vulnerabilities, only Python-related challenges will be added to the game.
 
 == Environment Variables
 Override defaults via environment variables (flags take precedence):
@@ -82,12 +93,13 @@ sandbox jit --new --game-slug just-in-time-training
              --game-end   2025-06-06T00:00:00Z 
              --game-chals "xsspy,xssjs"
              --in report.sarif
+             --filter-by-language
 ----
 
 === Updating an existing game based on new vulnerabilities
 [source,bash]
 ----
-sandbox jit --game-slug just-in-time-training --in report.sarif
+sandbox jit --game-slug just-in-time-training --in report.sarif --filter-by-language
 ----
 
 == CI/CD Integration
@@ -101,8 +113,9 @@ In your GitHub Actions (or other CI), you can add steps like:
 - name: Enrich SARIF
   run: sandbox enrich --in report.sarif --out enriched_report.sarif
 
-- name: Update JIT Game
+- name: Update JIT Game with Language Filtering
   run: |
     export SECDIM_API_KEY=${{ secrets.SEC_DIM_API_KEY }}
-    sandbox jit --game-slug my-jit-game --in enriched_report.sarif
+    sandbox jit --game-slug language-specific-training --filter-by-language --in report.sarif
 ----
+

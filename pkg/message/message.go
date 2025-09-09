@@ -3,7 +3,6 @@ package message
 import (
 	"fmt"
 	"sandbox/pkg/globals"
-	"sandbox/pkg/sarif"
 	"sandbox/pkg/search"
 	"strings"
 )
@@ -49,28 +48,101 @@ func generateHelpTextMessage(result search.SearchResult) string {
 	return builder.String()
 }
 
-func UpdateOutputSarifHelpMessage(outSarif sarif.Sarif, results []search.SearchResult) sarif.Sarif {
-	fmt.Printf("Updating output SARIF file with SecDim information\n")
-	for _, result := range results {
-		for _, run := range outSarif.Runs {
-			for i := 0; i < len(run.Tool.Driver.Rules); i++ {
-				if run.Tool.Driver.Rules[i].ID == result.RuleID {
-					if len(result.ResultJson) == 1 {
-						run.Tool.Driver.Rules[i].ShortDescription.Text = "SecDim: " + result.ResultJson[0].Title
-					} else if len(result.ResultJson) > 1 {
-						run.Tool.Driver.Rules[i].ShortDescription.Text = "SecDim: " + result.Title
+func UpdateSarif(sarifData map[string]interface{}, searchResults []search.SearchResult, toolType string) map[string]interface{} {
+	fmt.Printf("Updating SARIF data with SecDim information\n")
+
+	runs, ok := sarifData["runs"].([]interface{})
+	if !ok {
+		return sarifData
+	}
+
+	for _, run := range runs {
+		runMap, ok := run.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		tool, ok := runMap["tool"].(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		// Handle CodeQL (extensions)
+		if toolType == "codeql" {
+			extensions, ok := tool["extensions"].([]interface{})
+			if !ok {
+				continue
+			}
+			for _, extension := range extensions {
+				extMap, ok := extension.(map[string]interface{})
+				if !ok {
+					continue
+				}
+				rules, ok := extMap["rules"].([]interface{})
+				if !ok {
+					continue
+				}
+				updateRules(rules, searchResults)
+			}
+		} else { // Handle Semgrep, Snyk (driver)
+			driver, ok := tool["driver"].(map[string]interface{})
+			if !ok {
+				continue
+			}
+			rules, ok := driver["rules"].([]interface{})
+			if !ok {
+				continue
+			}
+			updateRules(rules, searchResults)
+		}
+	}
+
+	return sarifData
+}
+
+func updateRules(rules []interface{}, searchResults []search.SearchResult) {
+	for _, rule := range rules {
+		ruleMap, ok := rule.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		ruleID, ok := ruleMap["id"].(string)
+		if !ok {
+			continue
+		}
+
+		for _, searchResult := range searchResults {
+			if searchResult.RuleID == ruleID {
+				help, ok := ruleMap["help"].(map[string]interface{})
+				if !ok {
+					// If help doesn't exist, create it
+					help = make(map[string]interface{})
+					ruleMap["help"] = help
+				}
+
+				// Add to markdown
+				if markdown, ok := help["markdown"].(string); ok {
+					if !strings.Contains(markdown, "SecDim") {
+						help["markdown"] = generateHelpTextMessage(searchResult) + markdown
 					}
-					run.Tool.Driver.Rules[i].HelpUri = globals.CATALOG_URL
-					if !strings.Contains(run.Tool.Driver.Rules[i].Help.Text, "SecDim") {
-						run.Tool.Driver.Rules[i].Help.Text = generateHelpTextMessage(result) + run.Tool.Driver.Rules[i].Help.Text
-						run.Tool.Driver.Rules[i].Help.Markdown = generateHelpTextMessage(result) + run.Tool.Driver.Rules[i].Help.Markdown
+				} else {
+					// If markdown doesn't exist, create it
+					help["markdown"] = generateHelpTextMessage(searchResult)
+				}
+
+				// Add to text
+				if text, ok := help["text"].(string); ok {
+					if !strings.Contains(text, "SecDim") {
+						help["text"] = generateHelpTextMessage(searchResult) + text
 					}
+				} else {
+					// If text doesn't exist, create it
+					help["text"] = generateHelpTextMessage(searchResult)
 				}
 			}
 		}
 	}
-
-	return outSarif
 }
 
 func trimSearchTitlePrefix(title string) string {
@@ -92,7 +164,8 @@ func containsString(arr []string, givenStr string) bool {
 
 func cleanSearchTerm(term string) string {
 	term = trimSearchTitlePrefix(term)
-	term = strings.ReplaceAll(term, " ", "%20")
+	// Simplified URL encoding - avoid %20 which might cause SARIF parsing issues
+	term = strings.ReplaceAll(term, " ", "+")
 	term = strings.ReplaceAll(term, "'", "")
 	term = strings.ReplaceAll(term, "\"", "")
 	term = strings.ReplaceAll(term, "(", "")

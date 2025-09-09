@@ -12,6 +12,7 @@ import (
 
 	"sandbox/pkg/game"
 	"sandbox/pkg/globals"
+	"sandbox/pkg/language"
 	"sandbox/pkg/message"
 	"sandbox/pkg/sarif"
 	"sandbox/pkg/search"
@@ -28,6 +29,7 @@ func main() {
 		enrichCmd := flag.NewFlagSet("enrich", flag.ExitOnError)
 		inPath := enrichCmd.String("in", "", "input SARIF file path")
 		outPath := enrichCmd.String("out", "", "output SARIF file path")
+		tool := enrichCmd.String("tool", "", "scanner tool (semgrep, snyk, codeql) - auto-detected if not specified")
 		enrichCmd.Parse(os.Args[2:])
 
 		if *inPath == "" || *outPath == "" {
@@ -36,16 +38,21 @@ func main() {
 			os.Exit(1)
 		}
 
-		// Load and enrich SARIF
-		inSarifFile, err := sarif.ReadSarifFile(*inPath)
+		// Load SARIF as generic map to preserve structure
+		inSarifData, err := sarif.ReadSarifFile(*inPath)
 		if err != nil {
 			fmt.Printf("Exiting...\n")
 			os.Exit(1)
 		}
-		v := reflect.ValueOf(&inSarifFile).Elem()
-		sarif.RemoveNullFields(v)
 
-		var searchTerms = search.ParseSarifStruct(inSarifFile)
+		// Parse with structs just to find search terms (avoids rewriting search logic)
+		inSarifFileForParsing, err := sarif.ReadSarifFileForParsing(*inPath)
+		if err != nil {
+			fmt.Printf("Exiting...\n")
+			os.Exit(1)
+		}
+
+		var searchTerms = search.ParseSarifStruct(inSarifFileForParsing, *tool)
 		var searchResults []search.SearchResult
 
 		resultCount := 0
@@ -56,27 +63,23 @@ func main() {
 				continue
 			}
 			if len(result.ResultJson) > 0 {
-				if len(result.ResultJson) == 1 {
-					fmt.Printf("Found %d API search results\n", len(result.ResultJson))
-				} else {
-					fmt.Printf("Found %d API search results\n", len(result.ResultJson))
-				}
+				fmt.Printf("Found %d API search results for %s\n", len(result.ResultJson), result.RuleID)
 				searchResults = append(searchResults, result)
 				resultCount++
 			}
 		}
 
 		if resultCount == 0 {
-			fmt.Printf("No results found\n")
-		} else if resultCount == 1 {
-			fmt.Printf("Found 1 total vulnerability search result\n")
+			fmt.Printf("No SecDim results found for any rules\n")
 		} else {
-			fmt.Printf("Found %d total vulnerability search results\n", resultCount)
+			fmt.Printf("Found SecDim results for %d rules\n", resultCount)
 		}
 
-		outSarifFile := message.UpdateOutputSarifHelpMessage(inSarifFile, searchResults)
-		cleanedSarif := sarif.RemoveEmptyResults(outSarifFile)
-		sarif.WriteSarifFile(*outPath, cleanedSarif)
+		// Update the generic map directly
+		updatedSarifData := message.UpdateSarif(inSarifData, searchResults, *tool)
+
+		// Write the updated map back to the file
+		sarif.WriteSarifFile(*outPath, updatedSarifData)
 
 		fmt.Println("Please visit " + globals.CATALOG_URL + " to explore and debug other security vulnerabilities with SecDim")
 
@@ -92,6 +95,7 @@ func main() {
 		end := jitCmd.String("game-end", globals.GetEnv("JIT_GAME_END_TIME", ""), "end time (RFC3339)")
 		inSarifPath := jitCmd.String("in", "", "input SARIF file path to extract challenges")
 		newGame := jitCmd.Bool("new", false, "create a new game if it does not already exist")
+		filterByLanguage := jitCmd.Bool("filter-by-language", false, "filter challenges by detected languages from SARIF file")
 		jitCmd.Parse(os.Args[2:])
 
 		if *slug == "" {
@@ -185,7 +189,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		inSarif, err := sarif.ReadSarifFile(*inSarifPath)
+		inSarif, err := sarif.ReadSarifFileForParsing(*inSarifPath)
 		if err != nil {
 			fmt.Printf("Exiting...\n")
 			os.Exit(1)
@@ -193,7 +197,27 @@ func main() {
 		v := reflect.ValueOf(&inSarif).Elem()
 		sarif.RemoveNullFields(v)
 
-		terms := search.ParseSarifStruct(inSarif)
+		// Language detection if flag is enabled
+		var detectedLanguages []string
+		if *filterByLanguage {
+			// Read SARIF as map for language detection
+			sarifMap, err := sarif.ReadSarifFile(*inSarifPath)
+			if err != nil {
+				fmt.Printf("Error reading SARIF for language detection: %v\n", err)
+				os.Exit(1)
+			}
+			
+			detector := language.NewLanguageDetector()
+			detectedLanguages = detector.DetectLanguagesFromSarif(sarifMap)
+			
+			if len(detectedLanguages) > 0 {
+				fmt.Printf("Detected languages: %s\n", strings.Join(detectedLanguages, ", "))
+			} else {
+				fmt.Println("No languages detected from SARIF file")
+			}
+		}
+
+		terms := search.ParseSarifStruct(inSarif, "")
 		challengeSet := make(map[string]struct{})
 		for _, term := range terms {
 			res, err := search.GetSearchResults(term)
@@ -203,6 +227,12 @@ func main() {
 			}
 			for _, vuln := range res.ResultJson {
 				for _, sb := range vuln.Sandboxes {
+					// Apply language filtering if enabled
+					if *filterByLanguage && len(detectedLanguages) > 0 {
+						if !challengeMatchesLanguages(*sb.ChallengeSlug, detectedLanguages) {
+							continue
+						}
+					}
 					challengeSet[*sb.ChallengeSlug] = struct{}{}
 				}
 			}
@@ -235,6 +265,50 @@ func main() {
 	}
 }
 
+// challengeMatchesLanguages checks if a challenge slug contains any of the detected languages
+func challengeMatchesLanguages(challengeSlug string, detectedLanguages []string) bool {
+	challengeSlugLower := strings.ToLower(challengeSlug)
+	
+	// Language mappings for challenge slug patterns
+	languageMappings := map[string][]string{
+		"python": {"python", "py", "django", "flask"},
+		"javascript": {"javascript", "js", "node", "react", "vue", "angular", "express"},
+		"java": {"java", "spring", "maven", "gradle"},
+		"go": {"go", "golang"},
+		"php": {"php", "laravel", "symfony"},
+		"ruby": {"ruby", "rails"},
+		"csharp": {"csharp", "dotnet", "net", "cs"},
+		"cpp": {"cpp", "cplus", "c++"},
+		"c": {"clang"},
+		"typescript": {"typescript", "ts"},
+		"kotlin": {"kotlin"},
+		"swift": {"swift"},
+		"rust": {"rust"},
+		"scala": {"scala"},
+		"shell": {"shell", "bash", "sh"},
+	}
+	
+	for _, detectedLang := range detectedLanguages {
+		detectedLangLower := strings.ToLower(detectedLang)
+		
+		// Check direct language match
+		if strings.Contains(challengeSlugLower, detectedLangLower) {
+			return true
+		}
+		
+		// Check language-specific patterns
+		if patterns, exists := languageMappings[detectedLangLower]; exists {
+			for _, pattern := range patterns {
+				if strings.Contains(challengeSlugLower, pattern) {
+					return true
+				}
+			}
+		}
+	}
+	
+	return false
+}
+
 // parseCSV splits a comma-separated string into a slice, trimming spaces.
 func parseCSV(s string) []string {
 	if s == "" {
@@ -249,9 +323,14 @@ func parseCSV(s string) []string {
 
 func printUsage() {
 	fmt.Print(`Usage:
-  sandbox enrich --in <input.sarif> --out <output.sarif>
+  sandbox enrich --in <input.sarif> --out <output.sarif> [--tool <tool>]
   sandbox jit --game-slug <slug> [--game-title <title>] [--game-desc <desc>] [--game-tags <t1,t2>] \
-    [--game-deps <d1,d2>] [--game-chals <c1,c2>] [--game-start <RFC3339>] [--game-end <RFC3339>] [--new] --in <input.sarif>
+    [--game-deps <d1,d2>] [--game-chals <c1,c2>] [--game-start <RFC3339>] [--game-end <RFC3339>] [--new] \
+    [--filter-by-language] --in <input.sarif>
+
+Options:
+  --tool <tool>				Security scanner tool (semgrep, snyk, codeql). Auto-detected if not specified.
+  --filter-by-language		Filter JIT challenges by programming languages detected from SARIF file.
 
 Environment variables:
   SECDIM_SEARCH_API_URL	(SARIF enrichment search base URL)

@@ -14,7 +14,7 @@ type Sarif struct {
 
 type Runs struct {
 	Tool           Tool           `json:"tool"`
-	Artifacts      []Artifact     `json:"artifacts"`
+	Artifacts      []Artifact     `json:"artifacts,omitempty"`
 	Results        []Result       `json:"results"`
 	RunsProperties RunsProperties `json:"properties,omitempty"`
 	Invocations    []Invocation   `json:"invocations,omitempty"`
@@ -28,7 +28,8 @@ type Invocation struct {
 }
 
 type Tool struct {
-	Driver Driver `json:"driver"`
+	Driver     Driver       `json:"driver"`
+	Extensions []Driver     `json:"extensions,omitempty"` // For CodeQL extensions
 }
 
 type Driver struct {
@@ -63,8 +64,11 @@ type Help struct {
 }
 
 type Properties struct {
-	Precision string   `json:"precision"`
-	Tags      []string `json:"tags"`
+	Precision    string   `json:"precision,omitempty"`
+	Tags         []string `json:"tags,omitempty"`
+	Categories   []string `json:"categories,omitempty"`   // For Snyk
+	CWE          []string `json:"cwe,omitempty"`          // For Snyk CWE references
+	Description  string   `json:"description,omitempty"`  // For CodeQL descriptions
 }
 
 type ShortDescription struct {
@@ -86,6 +90,17 @@ type Result struct {
 	RuleIndex int         `json:"ruleIndex"`
 	Message   Message     `json:"message"`
 	Locations []Locations `json:"locations"`
+	Rule      *RuleRef    `json:"rule,omitempty"` // For CodeQL results
+}
+
+type RuleRef struct {
+	ID            string        `json:"id"`
+	Index         int           `json:"index"`
+	ToolComponent ToolComponent `json:"toolComponent,omitempty"`
+}
+
+type ToolComponent struct {
+	Index int `json:"index"`
 }
 
 type Message struct {
@@ -163,25 +178,66 @@ func RemoveEmptyResults(sarifData Sarif) Sarif {
 	var updatedSarif Sarif
 	updatedSarif.Schema = sarifData.Schema
 	updatedSarif.Version = sarifData.Version
+	
 	for _, run := range sarifData.Runs {
+		var updatedRun Runs
+		updatedRun.Tool = run.Tool
+		updatedRun.Invocations = run.Invocations
+		updatedRun.RunsProperties = run.RunsProperties
+		
+		// Determine tool type based on SARIF structure
+		toolName := ""
+		if run.Tool.Driver.Name != "" {
+			toolName = strings.ToLower(run.Tool.Driver.Name)
+		}
+		
+		// For Semgrep and Snyk, omit artifacts to avoid GHAS upload issues
+		// For CodeQL, preserve artifacts as they're needed
+		isCodeQL := strings.Contains(toolName, "codeql") || run.Tool.Extensions != nil
+		if isCodeQL {
+			updatedRun.Artifacts = run.Artifacts
+		}
+		// For Semgrep/Snyk, leave Artifacts as nil (omitempty will exclude it)
+		
+		// Filter results - keep only those with SecDim enrichment
 		for i := 0; i < len(run.Results); i++ {
 			result := run.Results[i]
 			foundResult := false
+			
+			// Check driver rules (Semgrep, Snyk)
 			for j := 0; j < len(run.Tool.Driver.Rules); j++ {
 				rule := run.Tool.Driver.Rules[j]
-				if result.RuleId == rule.ID && strings.HasPrefix(rule.ShortDescription.Text, "SecDim") {
+				if result.RuleId == rule.ID && (strings.Contains(rule.Help.Text, "SecDim") || strings.Contains(rule.Help.Markdown, "SecDim")) {
 					foundResult = true
 					break
 				}
 			}
-			if !foundResult {
-				// Remove result if rule ID matches and short description does not start with "SecDim"
-				run.Results = append(run.Results[:i], run.Results[i+1:]...)
-				i-- // Decrement i to account for the removed element
+			
+			// Check extension rules (CodeQL)
+			if !foundResult && run.Tool.Extensions != nil {
+				for _, extension := range run.Tool.Extensions {
+					if extension.Rules != nil {
+						for j := 0; j < len(extension.Rules); j++ {
+							rule := extension.Rules[j]
+							if result.RuleId == rule.ID && (strings.Contains(rule.Help.Text, "SecDim") || strings.Contains(rule.Help.Markdown, "SecDim")) {
+								foundResult = true
+								break
+							}
+						}
+					}
+					if foundResult {
+						break
+					}
+				}
+			}
+			
+			if foundResult {
+				updatedRun.Results = append(updatedRun.Results, result)
 			}
 		}
-		RemoveNullFields(reflect.ValueOf(&run))
-		updatedSarif.Runs = append(updatedSarif.Runs, run)
+		
+		RemoveNullFields(reflect.ValueOf(&updatedRun))
+		updatedSarif.Runs = append(updatedSarif.Runs, updatedRun)
 	}
 	return updatedSarif
 }
